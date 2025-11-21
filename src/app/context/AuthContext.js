@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import api from "../../lib/axios.js"; // tera axios instance
+import api from "../../lib/axios.js"; 
 
 const AuthContext = createContext({});
 
@@ -13,7 +13,7 @@ export const AuthProvider = ({ children }) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  // User data ko clean karne ke liye (id vs _id issue)
+  // User data's for cleaning
   const normalizeUser = (raw) => {
     if (!raw) return null;
     return {
@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
       // Optional: profile bhi merge kar sakta hai
       let profileData = {};
       try {
-        const profileRes = await api.get("/user/profile/get");
+        const profileRes = await api.get("/user/auth/me");
         profileData = profileRes.data.profile || {};
       } catch (err) {
         console.log("Profile fetch failed (optional)");
@@ -58,13 +58,11 @@ export const AuthProvider = ({ children }) => {
   // Auto redirect logic (middleware ki jagah yeh kaam karega)
   useEffect(() => {
     if (loading) return;
-
     const publicRoutes = ["/", "/login", "/register", "/forgot-password"];
-
     // Agar logged in hai aur login/register pe hai → dashboard pe bhej do
     if (user && publicRoutes.includes(pathname)) {
       router.replace("/dashboard");
-    }
+    };
 
     // Agar logged in nahi aur protected page pe hai → login pe bhej do
     if (!user && (pathname.startsWith("/dashboard") || pathname.startsWith("/profile"))) {
@@ -73,16 +71,22 @@ export const AuthProvider = ({ children }) => {
   }, [user, pathname, loading, router]);
 
   // Login function
-  const login = async (email, password) => {
-    try {
-      await api.post("/user/auth/login", { email, password });
-      // Cookie backend ne set kar di → ab fetchUser se user laao
-      await fetchUser();
-      router.replace("/dashboard");
-    } catch (err) {
-      throw err; // Login page pe error dikhega
-    }
-  };
+const login = async (email, password) => {
+  try {
+    await api.post("/user/auth/login", { email, password });
+
+    // Direct dashboard bhejo – fetchUser pe wait mat karo
+    router.replace("/dashboard");
+
+    // Background mein user fetch kar lo (no blocking)
+    setTimeout(() => {
+      fetchUser().catch(() => {});
+    }, 300);
+
+  } catch (err) {
+    throw new Error(err.response?.data?.message || "Login failed");
+  }
+};
 
   // Logout function
   const logout = async () => {
