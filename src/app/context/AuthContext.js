@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import api from "../../lib/axios";
+import api from "@/lib/axios";
 
 const AuthContext = createContext({});
 
@@ -28,33 +28,39 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, []);
 
-  // Sirf loading khatam hone ke baad redirect karo
+  // Redirect Logic - Sirf loading khatam hone ke baad
   useEffect(() => {
     if (loading) return;
 
     const publicRoutes = ["/", "/login", "/register", "/forgot-password"];
 
-    // Logged in + public page → dashboard
     if (user && publicRoutes.includes(pathname)) {
       router.replace("/dashboard");
-    }
-    // Not logged in + protected page → login
-    else if (!user && (pathname.startsWith("/dashboard") || pathname.startsWith("/profile"))) {
-      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+    } else if (!user && pathname.startsWith("/dashboard")) {
+      router.replace("/login");
+    } else if (!user && pathname.startsWith("/profile")) {
+      router.replace("/login");
     }
   }, [user, loading, pathname, router]);
 
   const login = async (email, password) => {
-    await api.post("/user/auth/login", { email, password });
-    await fetchUser(); // ab user set ho jayega
-    router.replace("/dashboard");
+    try {
+      await api.post("/user/auth/login", { email, password });
+      await fetchUser();
+    } catch (err) {
+      throw err;
+    }
   };
 
   const logout = async () => {
-    api.post("/user/auth/logout").finally(() => {
+    try {
+      await api.post("/user/auth/logout");
+    } catch (err) {
+      console.log("Logout failed");
+    } finally {
       setUser(null);
       router.replace("/login");
-    });
+    }
   };
 
   return (
@@ -64,4 +70,8 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
+  return context;
+};

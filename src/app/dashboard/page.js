@@ -1,14 +1,10 @@
-// src/app/dashboard/page.jsx
-
 "use client";
 
-import React, { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import React, { Suspense, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from ".././context/AuthContext";
-
 import Sidebar from "../components/Sidebar";
+import TopBar from "../components/TopBar/TopBar";
 import DashboardScreen from "../components/DashboardScreen";
 import OnboardScreen from "./(onboarding)/OnboardingScreen";
 import BrainbattleScreen from "./(brainbattle)/BrainbattleScreen";
@@ -20,109 +16,32 @@ import PodcastDetailScreen from "./(podcast)/PodcastDetailScreen";
 import SummarizerScreen from "./(summarizer)/SummarizerScreen";
 import SummarizeScreen from "./(summarizer)/SummarizeScreen";
 import CodingTechnology from "./(codingTechnology)/CodingTechnology";
-import TopBar from "../components/TopBar/TopBar";
-import PopUp from "../components/PopUp/PopUp";
 import WritingCommunication from "./writingandcommunication/WritingCommunication";
 import WritingResult from "./writingandcommunication/result/page";
 import AskAnything from "./(askAnything)/AskAnything";
+import PopUp from "../components/PopUp/PopUp";
 
 function DashboardContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [active, setActive] = useState("dashboard");
-  const [selectedSubject, setSelectedSubject] = useState(null);
-  const [podcastTopic, setPodcastTopic] = useState("");
-  const [podcastData, setPodcastData] = useState(null);
-  const [showPopup, setShowPopup] = useState(true);
-  const [resultData, setResultData] = useState({ format: "", topic: "" });
+  const [active, setActive] = React.useState("dashboard");
+  const [selectedSubject, setSelectedSubject] = React.useState(null);
+  const [showPopup, setShowPopup] = React.useState(true);
 
-  // YE POORA useEffect DELETE KAR DIYA — yeh wahi culprit tha
-  // AuthContext khud hi redirect handle karega
-
-  // Query params handle karo
   useEffect(() => {
-    const activeParam = searchParams.get("active");
-    const subjectParam = searchParams.get("subject");
-
-    if (activeParam) setActive(activeParam);
-    if (subjectParam) setSelectedSubject(subjectParam);
+    const param = searchParams.get("active");
+    if (param) setActive(param);
+    const subject = searchParams.get("subject");
+    if (subject) setSelectedSubject(subject);
   }, [searchParams]);
 
   const handleSetActive = (value) => {
     setActive(value);
-    if (value !== "subjectChat") {
-      const url = value === "dashboard" ? "/dashboard" : `/dashboard?active=${value}`;
-      router.push(url);
-    }
+    router.push(value === "dashboard" ? "/dashboard" : `/dashboard?active=${value}`);
   };
 
-  const renderContent = () => {
-    if (!user) return null; // AuthContext khud redirect kar dega
-
-    switch (active) {
-      case "dashboard":
-        return <DashboardScreen user={user} />;
-      case "ask":
-        return <AskAnything user={user} />;
-      case "onboarding":
-        return <OnboardScreen user={user} />;
-      case "brain":
-        return <BrainbattleScreen setActive={handleSetActive} />;
-      case "quiz":
-        return <QuizScreen setActive={handleSetActive} />;
-      case "explore":
-        return <ExploreSubject user={user} />;
-      case "subjectChat":
-        return (
-          <SubjectChatScreen
-            subject={selectedSubject}
-            user={user}
-            setActive={handleSetActive}
-          />
-        );
-      case "podcast":
-        return (
-          <PodcastScreen
-            setActive={handleSetActive}
-            setPodcastTopic={setPodcastTopic}
-            setPodcastData={setPodcastData}
-            user={user}
-          />
-        );
-      case "podcastDetail":
-        return (
-          <PodcastDetailScreen
-            data={podcastData}
-            setActive={handleSetActive}
-            user={user}
-          />
-        );
-      case "summarize":
-        return <SummarizerScreen setActive={handleSetActive} />;
-      case "summarizeView":
-        return <SummarizeScreen setActive={handleSetActive} />;
-      case "codingtech":
-        return <CodingTechnology user={user} />;
-      case "writingcomm":
-        return (
-          <WritingCommunication
-            onSubmit={(format, topic) => {
-              setResultData({ format, topic });
-              setActive("writingResult");
-              router.push("/dashboard?active=writingResult");
-            }}
-          />
-        );
-      case "writingResult":
-        return <WritingResult data={resultData} user={user} />;
-      default:
-        return <div className="text-xl p-8">Coming soon...</div>;
-    }
-  };
-
-  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-white">
@@ -131,26 +50,36 @@ function DashboardContent() {
     );
   }
 
-  // Agar user nahi mila → kuch mat dikhao (AuthContext redirect kar dega)
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-white">
-        <div className="text-xl text-gray-600">Redirecting...</div>
-      </div>
-    );
-  }
+  if (!user) return null; // AuthProvider will redirect
+
+  const renderScreen = () => {
+    switch (active) {
+      case "dashboard": return <DashboardScreen user={user} />;
+      case "ask": return <AskAnything user={user} />;
+      case "onboarding": return <OnboardScreen user={user} />;
+      case "brain": return <BrainbattleScreen setActive={handleSetActive} />;
+      case "quiz": return <QuizScreen setActive={handleSetActive} />;
+      case "explore": return <ExploreSubject user={user} />;
+      case "subjectChat": return <SubjectChatScreen subject={selectedSubject} user={user} setActive={handleSetActive} />;
+      case "podcast": return <PodcastScreen setActive={handleSetActive} user={user} />;
+      case "podcastDetail": return <PodcastDetailScreen setActive={handleSetActive} user={user} />;
+      case "summarize": return <SummarizerScreen setActive={handleSetActive} />;
+      case "summarizeView": return <SummarizeScreen setActive={handleSetActive} />;
+      case "codingtech": return <CodingTechnology user={user} />;
+      case "writingcomm": return <WritingCommunication onSubmit={(f, t) => { setActive("writingResult"); }} />;
+      case "writingResult": return <WritingResult user={user} />;
+      default: return <DashboardScreen user={user} />;
+    }
+  };
 
   return (
-    <div className="flex h-screen bg-[#FFFFFF] text-black overflow-hidden">
+    <div className="flex h-screen bg-white text-black overflow-hidden">
       <Sidebar active={active} setActive={handleSetActive} user={user} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-shrink-0 p-4 bg-[#FFFFFF]">
-          <TopBar active={active} user={user} />
-        </div>
-
-        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#173837] scrollbar-track-transparent">
-          {renderContent()}
+        <TopBar user={user} active={active} />
+        <div className="flex-1 overflow-y-auto bg-gray-50">
+          {renderScreen()}
         </div>
       </div>
 
@@ -161,7 +90,7 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-gray-400">Loading dashboard...</div>}>
+    <Suspense fallback={<div className="p-10 text-center text-gray-500">Loading...</div>}>
       <DashboardContent />
     </Suspense>
   );

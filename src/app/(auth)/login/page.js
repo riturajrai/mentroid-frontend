@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import axios from "axios";
-import { useAuth } from "../../context/AuthContext.js";
-import toast, { Toaster } from "react-hot-toast"; // Import toast + Toaster
+import { useAuth } from "../../context/AuthContext";
+import toast, { Toaster } from "react-hot-toast";
 import { X, Lock, Mail, CheckCircle, Loader2 } from "lucide-react";
+import axios from "axios";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -34,109 +34,72 @@ export default function LoginPage() {
   // Redirect if already logged in
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace("/profile");
+      router.replace("/dashboard");
     }
   }, [user, authLoading, router]);
 
-  // Login Handler with Success Toast
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      setErrorMsg("Please enter both email and password");
-      return;
-    }
+    if (!email || !password) return setErrorMsg("Please fill all fields");
 
     setLoading(true);
     setErrorMsg("");
 
     try {
       await login(email, password);
-
-      // Success Toast
-      toast.success("Welcome back! Login successful", {
-        duration: 4000,
-        position: "top-center",
+      toast.success("Welcome back to MentoroidAI!", {
         icon: "Welcome",
-        style: {
-          background: "#10b981",
-          color: "white",
-          fontWeight: "bold",
-        },
+        style: { background: "#10b981", color: "white" },
       });
-
-      // Redirect after a short delay so user sees the toast
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 800);
-
+      setTimeout(() => router.replace("/dashboard"), 600);
     } catch (error) {
-      const msg = error.response?.data?.message || error.message || "Invalid credentials";
+      const msg = error.response?.data?.message || "Invalid email or password";
       setErrorMsg(msg);
-      toast.error(msg); // Error toast
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  // Forgot Password Functions (same with toast feedback)
+  // Forgot Password Functions
   const sendOtp = async () => {
-    setForgotError("");
-    setForgotLoading(true);
+    setForgotError(""); setForgotLoading(true);
     try {
       await axios.post(`${API_URL}/user/forget-password`, { email: forgotEmail });
       toast.success("OTP sent to your email!");
-      setForgotSuccess("OTP sent to your email!");
       setStep(2);
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to send OTP";
-      setForgotError(msg);
-      toast.error(msg);
+      toast.error(err.response?.data?.message || "Failed to send OTP");
     } finally {
       setForgotLoading(false);
     }
   };
 
   const verifyOtp = async () => {
-    setForgotError("");
-    setForgotLoading(true);
+    setForgotError(""); setForgotLoading(true);
     try {
       await axios.post(`${API_URL}/user/verify-forget-otp`, { email: forgotEmail, otp });
-      toast.success("OTP verified successfully!");
-      setForgotSuccess("OTP verified successfully!");
+      toast.success("OTP Verified!");
       setStep(3);
     } catch (err) {
-      const msg = err.response?.data?.message || "Invalid or expired OTP";
-      setForgotError(msg);
-      toast.error(msg);
+      toast.error(err.response?.data?.message || "Invalid OTP");
     } finally {
       setForgotLoading(false);
     }
   };
 
   const resetPassword = async () => {
-    if (newPassword !== confirmPassword) return setForgotError("Passwords do not match");
-    if (newPassword.length < 6) return setForgotError("Password must be at least 6 characters");
+    if (newPassword !== confirmPassword) return toast.error("Passwords don't match");
+    if (newPassword.length < 6) return toast.error("Password too short");
 
-    setForgotError("");
     setForgotLoading(true);
     try {
       await axios.post(`${API_URL}/user/reset-password`, { email: forgotEmail, newPassword });
       toast.success("Password changed successfully!");
-      setForgotSuccess("Password changed successfully!");
-
-      setTimeout(() => {
-        setShowForgotModal(false);
-        setStep(1);
-        setForgotEmail("");
-        setOtp("");
-        setNewPassword("");
-        setConfirmPassword("");
-        setForgotSuccess("");
-      }, 1500);
+      setTimeout(() => setShowForgotModal(false), 1500);
+      setStep(1); setForgotEmail(""); setOtp(""); setNewPassword(""); setConfirmPassword("");
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to reset password";
-      setForgotError(msg);
-      toast.error(msg);
+      toast.error(err.response?.data?.message || "Failed to reset");
     } finally {
       setForgotLoading(false);
     }
@@ -144,14 +107,11 @@ export default function LoginPage() {
 
   return (
     <>
-      {/* Toaster Component - Add this at root level */}
-      <Toaster position="top-center" reverseOrder={false} />
+      <Toaster position="top-center" />
 
-      {/* Your existing beautiful UI */}
       <div className="min-h-screen flex flex-col lg:flex-row">
-        {/* LEFT: Branding */}
-        <div className="w-full lg:w-1/2 bg-gradient-to-br from-blue-500 to-blue-700 text-white p-10 lg:p-16 flex flex-col justify-center items-center relative overflow-hidden">
-          <div className="absolute inset-0 bg-black/5"></div>
+        {/* LEFT */}
+        <div className="w-full lg:w-1/2 bg-gradient-to-br from-blue-600 to-indigo-800 text-white p-10 lg:p-16 flex flex-col justify-center items-center relative overflow-hidden">
           <div className="relative z-10 text-center lg:text-left max-w-lg">
             <h1 className="text-5xl lg:text-7xl font-bold mb-6 leading-tight">
               Welcome Back<br />
@@ -171,7 +131,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* RIGHT: Login Form */}
+        {/* RIGHT */}
         <div className="w-full lg:w-1/2 bg-white p-8 lg:p-16 flex items-center justify-center">
           <div className="w-full max-w-md">
             <h2 className="text-4xl font-bold text-gray-900 mb-8 text-center lg:text-left">
@@ -179,35 +139,28 @@ export default function LoginPage() {
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="w-full px-5 py-4 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-5 py-4 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                  required
-                />
-              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full px-5 py-4 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
+                required
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-5 py-4 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
+                required
+              />
 
               <div className="flex justify-end">
                 <button
                   type="button"
                   onClick={() => setShowForgotModal(true)}
-                  className="text-blue-600 hover:text-blue-700 font-medium text-sm hover:underline"
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium hover:underline"
                 >
                   Forgot Password?
                 </button>
@@ -267,17 +220,6 @@ export default function LoginPage() {
               </h3>
             </div>
 
-            {forgotError && (
-              <p className="text-red-600 bg-red-50 px-4 py-3 rounded-lg text-center mb-4">
-                {forgotError}
-              </p>
-            )}
-            {forgotSuccess && (
-              <p className="text-green-600 flex items-center justify-center gap-2 mb-4">
-                <CheckCircle className="w-5 h-5" /> {forgotSuccess}
-              </p>
-            )}
-
             {step === 1 && (
               <div className="space-y-5">
                 <input
@@ -289,11 +231,11 @@ export default function LoginPage() {
                 />
                 <button
                   onClick={sendOtp}
-                  disabled={forgotLoading || !forgotEmail.includes("@")}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl disabled:opacity-70 flex items-center justify-center gap-2"
+                  disabled={forgotLoading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2"
                 >
-                  {forgotLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Mail className="w-5 h-5" />}
-                  {forgotLoading ? "Sending..." : "Send OTP"}
+                  {forgotLoading ? <Loader2 className="animate-spin" /> : <Mail className="w-5 h-5" />}
+                  Send OTP
                 </button>
               </div>
             )}
@@ -311,9 +253,9 @@ export default function LoginPage() {
                 <button
                   onClick={verifyOtp}
                   disabled={forgotLoading || otp.length !== 6}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl disabled:opacity-70"
+                  className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl"
                 >
-                  {forgotLoading ? "Verifying..." : "Verify OTP"}
+                  Verify OTP
                 </button>
               </div>
             )}
@@ -336,10 +278,10 @@ export default function LoginPage() {
                 />
                 <button
                   onClick={resetPassword}
-                  disabled={forgotLoading || newPassword !== confirmPassword || newPassword.length < 6}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl disabled:opacity-70"
+                  disabled={forgotLoading || newPassword !== confirmPassword}
+                  className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl"
                 >
-                  {forgotLoading ? "Updating..." : "Change Password"}
+                  Change Password
                 </button>
               </div>
             )}
