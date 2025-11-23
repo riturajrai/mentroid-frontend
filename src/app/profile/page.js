@@ -1,20 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import api from "@/lib/axios";
+import toast from "react-hot-toast"; // Make sure you have this installed
 
 export default function Profile() {
   const { user, loading, logout, refetch } = useAuth();
-  const router = useRouter();
-
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [editData, setEditData] = useState({});
+  const [editData, setEditData] = useState({
+    name: "",
+    studentWhatsapp: "",
+    parentWhatsapp: "",
+    schoolName: "",
+    board: "",
+    class: "",
+  });
 
-  // Jab user load ho jaye to edit form mein data fill kar do
+  // Fill form when user loads
   useEffect(() => {
     if (user) {
       setEditData({
@@ -30,17 +35,44 @@ export default function Profile() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setEditData(prev => ({ ...prev, [name]: value }));
+    setEditData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const validatePhone = (num) => {
+    const cleaned = num.replace(/\D/g, "");
+    return cleaned.length === 10 || cleaned.length === 12; // 10 or +91...
   };
 
   const handleSave = async () => {
     setError("");
+
+    // Required field: studentWhatsapp
+    if (!editData.studentWhatsapp?.trim()) {
+      setError("Your WhatsApp number is required.");
+      return;
+    }
+
+    if (!validatePhone(editData.studentWhatsapp)) {
+      setError("Please enter a valid 10-digit WhatsApp number.");
+      return;
+    }
+
     setSaving(true);
     try {
-      await api.put("/user/profile/update", editData);
+      await api.put("/user/profile/update", {
+        name: editData.name.trim() || undefined,
+        studentWhatsapp: editData.studentWhatsapp.replace(/\D/g, "").replace(/^91/, "+91"),
+        parentWhatsapp: editData.parentWhatsapp
+          ? editData.parentWhatsapp.replace(/\D/g, "").replace(/^91/, "+91")
+          : undefined,
+        schoolName: editData.schoolName.trim() || undefined,
+        board: editData.board || undefined,
+        class: editData.class || undefined,
+      });
+
       await refetch();
       setIsEditing(false);
-      toast.success("Profile updated successfully!"); // optional
+      toast.success("Profile updated successfully!");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to update profile");
     } finally {
@@ -48,7 +80,6 @@ export default function Profile() {
     }
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -57,27 +88,17 @@ export default function Profile() {
     );
   }
 
-  // Agar user nahi hai → kuch mat dikhao (AuthContext khud login pe bhej dega)
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-xl text-gray-600">Redirecting to login...</div>
-      </div>
-    );
-  }
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50 py-6 px-4 text-xs leading-relaxed">
       <div className="max-w-5xl mx-auto">
-        {/* Profile Card */}
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-          {/* Gradient Header */}
           <div className="h-28 md:h-40 bg-gradient-to-r from-blue-600 via-teal-500 to-emerald-600 relative">
             <div className="absolute inset-0 bg-black/20"></div>
           </div>
 
           <div className="relative px-4 md:px-10 -mt-16 md:-mt-24 pb-8">
-            {/* Avatar + Name */}
             <div className="flex flex-col items-center md:flex-row md:items-end gap-5">
               <div className="bg-white p-2 rounded-full shadow-2xl ring-4 ring-white">
                 <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-blue-500 to-teal-500 flex items-center justify-center text-white text-4xl md:text-5xl font-bold shadow-xl">
@@ -105,10 +126,9 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Profile Details */}
           <div className="px-4 md:px-10 pb-8">
             {error && (
-              <div className="mb-5 bg-red-50 text-red-700 p-3 rounded-xl text-center text-xs font-medium">
+              <div className="mb-5 bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl text-center font-medium">
                 {error}
               </div>
             )}
@@ -123,22 +143,24 @@ export default function Profile() {
                     name="name"
                     value={editData.name}
                     onChange={handleChange}
-                    className="mt-1.5 w-full px-3 py-2.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="mt-1.5 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    placeholder="Enter your name"
                   />
                 ) : (
                   <p className="mt-1.5 font-medium text-gray-900">{user.name || "Not set"}</p>
                 )}
               </div>
 
-              {/* Email (non-editable) */}
               <div>
                 <label className="text-gray-600 font-semibold">Email Address</label>
                 <p className="mt-1.5 font-medium text-gray-900">{user.email}</p>
               </div>
 
-              {/* Student WhatsApp */}
+              {/* Student WhatsApp - Required */}
               <div>
-                <label className="text-gray-600 font-semibold">Your WhatsApp</label>
+                <label className="text-gray-600 font-semibold">
+                  Your WhatsApp <span className="text-red-500">*</span>
+                </label>
                 {isEditing ? (
                   <input
                     type="tel"
@@ -146,7 +168,7 @@ export default function Profile() {
                     value={editData.studentWhatsapp}
                     onChange={handleChange}
                     placeholder="+91 98765 43210"
-                    className="mt-1.5 w-full px-3 py-2.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="mt-1.5 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   />
                 ) : (
                   <p className="mt-1.5 font-medium text-gray-900">
@@ -165,7 +187,7 @@ export default function Profile() {
                     value={editData.parentWhatsapp}
                     onChange={handleChange}
                     placeholder="+91 98765 00000"
-                    className="mt-1.5 w-full px-3 py-2.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="mt-1.5 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   />
                 ) : (
                   <p className="mt-1.5 font-medium text-gray-900">
@@ -174,7 +196,7 @@ export default function Profile() {
                 )}
               </div>
 
-              {/* Board */}
+              {/* Board & Class */}
               <div>
                 <label className="text-gray-600 font-semibold">Board</label>
                 {isEditing ? (
@@ -182,21 +204,18 @@ export default function Profile() {
                     name="board"
                     value={editData.board}
                     onChange={handleChange}
-                    className="mt-1.5 w-full px-3 py-2.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="mt-1.5 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   >
                     <option value="">Select Board</option>
-                    <option>CBSE</option>
-                    <option>ICSE</option>
-                    <option>State Board</option>
-                    <option>IB</option>
-                    <option>IGCSE</option>
+                    {["CBSE", "ICSE", "State Board", "IB", "IGCSE"].map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
                   </select>
                 ) : (
                   <p className="mt-1.5 font-medium text-gray-900">{user.board || "Not set"}</p>
                 )}
               </div>
 
-              {/* Class */}
               <div>
                 <label className="text-gray-600 font-semibold">Class</label>
                 {isEditing ? (
@@ -204,10 +223,10 @@ export default function Profile() {
                     name="class"
                     value={editData.class}
                     onChange={handleChange}
-                    className="mt-1.5 w-full px-3 py-2.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="mt-1.5 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   >
                     <option value="">Select Class</option>
-                    {[6, 7, 8, 9, 10, 11, 12].map(c => (
+                    {[6, 7, 8, 9, 10, 11, 12].map((c) => (
                       <option key={c} value={c}>Class {c}</option>
                     ))}
                   </select>
@@ -218,7 +237,6 @@ export default function Profile() {
                 )}
               </div>
 
-              {/* School Name */}
               <div className="md:col-span-2">
                 <label className="text-gray-600 font-semibold">School Name</label>
                 {isEditing ? (
@@ -227,8 +245,8 @@ export default function Profile() {
                     name="schoolName"
                     value={editData.schoolName}
                     onChange={handleChange}
-                    placeholder="Delhi Public School"
-                    className="mt-1.5 w-full px-3 py-2.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    placeholder="e.g. Delhi Public School"
+                    className="mt-1.5 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   />
                 ) : (
                   <p className="mt-1.5 font-medium text-gray-900">
@@ -238,20 +256,19 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
               {isEditing ? (
                 <>
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="px-8 py-3 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-bold rounded-lg hover:shadow-lg transform hover:scale-105 transition disabled:opacity-70 text-xs"
+                    className="px-8 py-3 bg-gradient-to-r from-blue-600 to-teal-600 text-white font-bold rounded-lg hover:shadow-lg transform hover:scale-105 transition disabled:opacity-70"
                   >
                     {saving ? "Saving..." : "Save Changes"}
                   </button>
                   <button
                     onClick={() => setIsEditing(false)}
-                    className="px-8 py-3 border-2 border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition text-xs"
+                    className="px-8 py-3 border-2 border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition"
                   >
                     Cancel
                   </button>
@@ -260,13 +277,13 @@ export default function Profile() {
                 <>
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold rounded-lg hover:shadow-lg transform hover:scale-105 transition text-xs"
+                    className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold rounded-lg hover:shadow-lg transform hover:scale-105 transition"
                   >
                     Edit Profile
                   </button>
                   <button
                     onClick={logout}
-                    className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition text-xs"
+                    className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition"
                   >
                     Logout
                   </button>
