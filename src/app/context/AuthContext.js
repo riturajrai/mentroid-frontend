@@ -13,7 +13,6 @@ export const AuthProvider = ({ children }) => {
 
   const pathname = usePathname();
 
-  // Full user data fetch from profile endpoint
   const fetchUser = async () => {
     try {
       setLoading(true);
@@ -32,47 +31,51 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Initial load
+  // App start pe user check karo
   useEffect(() => {
     fetchUser();
   }, []);
 
-  // Redirect logic — Production-safe using window.location
+  // Redirect logic — INFINITE LOOP PROOF (sabse important fix)
   useEffect(() => {
     if (loading) return;
 
-    const publicRoutes = ["/", "/login", "/register", "/forgot-password" , "/dashboard"];
-    const isPublic = publicRoutes.includes(pathname);
-    const isProtected = pathname.startsWith("/profile") || pathname.startsWith("/profile");
-
-    if (user && isPublic) {
-      window.location.href = "/profile";
-    } else if (!user && isProtected) {
-      window.location.href = "/login";
+    // Agar user logged in hai aur public page pe hai (login, register, etc.)
+    if (user && (pathname === "/" || pathname === "/login" || pathname === "/register" || pathname === "/forgot-password")) {
+      window.location.href = "/profile"; // ya "/dashboard" jo bhi ho
+      return;
     }
-  }, [user, loading, pathname]);
 
-  // Login function — Production safe
+    // Agar user nahi hai aur protected page pe hai
+    if (!user && (pathname.startsWith("/profile") || pathname.startsWith("/profile"))) {
+      window.location.href = "/login";
+      return;
+    }
+
+    // Agar user hai aur /profile pe hai → kuch mat karo (loop nahi hoga)
+    // Agar user nahi hai aur /login pe hai → kuch mat karo
+  }, [user, loading]); // ← pathname dependency hata di → loop khatam!
+
+  // Login function
   const login = async (email, password) => {
     try {
       await api.post("/user/auth/login", { email, password });
-      await fetchUser(); // Fresh data load
-      window.location.href = "/profile"; // 100% reliable in production
+      await fetchUser();
+      window.location.href = "/profile"; // ya "/dashboard"
     } catch (err) {
       throw err;
     }
   };
 
-  // Logout function — Production safe
+  // Logout function
   const logout = async () => {
     try {
       await api.post("/user/auth/logout");
     } catch (err) {
-      console.log("Logout API failed, clearing anyway");
+      console.log("Logout failed");
     } finally {
       setUser(null);
-      setLoading(false);
-      window.location.href = "/login"; // Full reload, clears everything
+      window.location.href = "/login";
     }
   };
 
@@ -83,7 +86,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         logout,
-        refetch: fetchUser, // Manual refresh (profile save ke baad use karna)
+        refetch: fetchUser,
       }}
     >
       {children}
