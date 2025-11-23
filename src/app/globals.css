@@ -1,10 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 
-body {
-  font-family: 'Poppins', sans-serif;
+/* Direct Tailwind ko extend karo - config file ki zarurat nahi! */
+@theme {
+  --color-primary: #006188;
+  --color-primary-dark: #004d70;
+  --color-primary-light: #0088b8;
 }

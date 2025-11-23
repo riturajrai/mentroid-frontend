@@ -1,145 +1,99 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { ArrowUpDownIcon, MenuIcon, XIcon, UserIcon } from "lucide-react"; // Added UserIcon for profile
-import { menuItems } from "../dashboard/data/menuItems";
-import Image from "next/image";
-import Cookies from "js-cookie";
-import { useRouter } from "next/navigation";
+import React, { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
-export default function Sidebar({ active, setActive }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [userName, setUserName] = useState("User");
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef(null);
-  const router = useRouter();
+// Icons
+import {
+  BarChart2Icon,
+  UsersIcon,
+  MessageSquareIcon,
+  BookOpenIcon,
+  ZapIcon,
+  FileTextIcon,
+  CreditCardIcon,
+  BrainIcon,
+  TargetIcon,
+  CalendarIcon,
+  MicIcon,
+  StarIcon,
+  Menu,
+  X,
+} from "lucide-react";
 
-  // 🧠 Read user cookie
-  useEffect(() => {
-    const userCookie = Cookies.get("user");
-    if (userCookie) {
-      try {
-        const user = JSON.parse(userCookie);
-        if (user.name) setUserName(user.name);
-      } catch (err) {
-        console.error("Error parsing user cookie:", err);
-      }
-    }
-  }, []);
+// MENU ITEMS
+const menuItems = [
+  { id: "dashboard", label: "Dashboard", icon: <BarChart2Icon className="w-5 h-5" /> },
+  { id: "onboarding", label: "Onboarding", icon: <UsersIcon className="w-5 h-5" /> },
+  { id: "ask", label: "Ask anything", icon: <MessageSquareIcon className="w-5 h-5" /> },
+  { id: "explore", label: "Explore Subjects", icon: <BookOpenIcon className="w-5 h-5" /> },
+  { id: "codingtech", label: "Coding & Technology", icon: <ZapIcon className="w-5 h-5" /> },
+  { id: "writingcomm", label: "Writing & Communication", icon: <FileTextIcon className="w-5 h-5" /> },
+  { id: "summarize", label: "Summarizer Note", icon: <FileTextIcon className="w-5 h-5" /> },
+  { id: "flashcards", label: "Flashcards", icon: <CreditCardIcon className="w-5 h-5" /> },
+  { id: "brain", label: "Brain Battle", icon: <BrainIcon className="w-5 h-5" /> },
+  { id: "adaptive", label: "Adaptive Learning", icon: <TargetIcon className="w-5 h-5" /> },
+  { id: "today", label: "Today's Learning", icon: <CalendarIcon className="w-5 h-5" /> },
+  { id: "podcast", label: "Podcast", icon: <MicIcon className="w-5 h-5" /> },
+  { id: "points", label: "Points", icon: <StarIcon className="w-5 h-5" /> },
+];
 
-  // 🧩 Close dropdown when clicked outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handleLogout = () => {
-    Cookies.remove("user");
-    router.push("/login");
-  };
-
-  const handleProfile = () => {
-    router.push("/profile");
-    setIsOpen(false);
-  };
+export default function Sidebar() {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
   return (
     <>
-      {/* 🌐 Mobile Top Bar */}
-      <div className="md:hidden flex items-center justify-between bg-[#FFFFFF] p-4 shadow-md fixed top-0 left-0 right-0 z-50">
-        <div className="text-white font-bold text-lg">Mentoroid</div>
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="text-white focus:outline-none"
-        >
-          {isOpen ? <XIcon className="w-6 h-6" /> : <MenuIcon className="w-6 h-6" />}
-        </button>
-      </div>
-
-      {/* 🌙 Sidebar Drawer */}
-      <div
-        className={`fixed md:static top-0 left-0 h-full md:h-screen w-4/5 sm:w-2/5 md:w-1/4 lg:w-1/5 bg-[#FFFFFF] p-6 shadow-2xl transform transition-transform duration-300 flex flex-col z-50 ${
-          isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        }`}
+      {/* Mobile menu button */}
+      <button
+        onClick={() => setOpen(!open)}
+        className="sm:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-md shadow-md"
       >
-        {/* Logo Section */}
-        <div className="flex-shrink-0 w-full h-[60px] bg-[#FFFFFF] flex items-center justify-between px-5 rounded-[20px] shadow-md mt-10 md:mt-0">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 flex items-center justify-center text-white font-semibold rounded-md">
-              <Image
-                src="/assets/mentoroid.png"
-                alt="Mentoroid Logo"
-                width={50}
-                height={50}
-                className="object-contain"
-              />
-            </div>
-            <div className="flex flex-col leading-tight">
-              <div className="font-bold text-lg">
-                <span className="text-[#0B3D91]">Mentoroid</span>
-                <span className="text-[#20C997]">AI</span>
-              </div>
-              <p className="text-sm text-[#002D8A] opacity-70">Free Plan</p>
-            </div>
-          </div>
-          <ArrowUpDownIcon className="text-white w-4 h-4 opacity-80 cursor-pointer" />
-        </div>
+        {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+      </button>
 
-        {/* Menu Section */}
-        <div className="mt-8 flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-[#FFFFFF] scrollbar-track-transparent hover:scrollbar-thumb-[#205b5a]">
-          {menuItems.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => {
-                setActive(item.id);
-                setIsOpen(false);
-              }}
-              className={`flex items-center space-x-4 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 ${
-                active === item.id
-                  ? "bg-[#006188] text-white"
-                  : "text-[#333333] hover:bg-[#006188] hover:text-white"
-              }`}
-            >
-              {/* Replace emoji with SVG icon */}
-              <span className="text-xl">{item.icon}</span>
-              <span className="font-medium">{item.label}</span>
-            </div>
-          ))}
+      {/* Sidebar */}
+      <aside
+  className={`
+    fixed top-0 left-0 h-screen w-64 bg-white border-r p-5 
+    transform transition-transform duration-300
+    ${open ? "translate-x-0" : "-translate-x-full"} 
+    sm:translate-x-0
+    sm:z-50 lg:z-auto
+  `}
+>
+  <h2 className="text-xl font-semibold text-primary mb-6">Menu</h2>
 
-          {/* Profile Route at the bottom */}
-          <div
-            onClick={handleProfile}
-            className={`flex items-center space-x-4 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 ${
-              active === "profile"
-                ? "bg-[#006188] text-white"
-                : "text-[#333333] hover:bg-[#006188] hover:text-white"
-            }`}
-          >
-            <UserIcon className="w-5 h-5" />
-            <span className="font-medium">Profile</span>
-          </div>
+  <nav className="flex flex-col gap-2 text-[12px] lg:text-[14px] lg:mt-20">
+    {menuItems.map((item) => {
+      const isActive = pathname.includes(item.id);
 
-          {/* Logout */}
-          <div
-            onClick={handleLogout}
-            className="flex items-center space-x-4 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 text-[#333333] hover:bg-[#006188] hover:text-white"
-          >
-            <ArrowUpDownIcon className="w-5 h-5" />
-            <span className="font-medium">Logout</span>
-          </div>
-        </div>
-      </div>
+      return (
+        <Link
+          key={item.id}
+          href={`/${item.id}`}
+          className={`flex items-center gap-3 p-3 rounded-xl transition font-medium ${
+            isActive
+              ? "bg-primary text-white shadow-md"
+              : "text-gray-700 hover:bg-primary-light/15 hover:text-primary"
+          }`}
+          onClick={() => setOpen(false)} // Close menu on mobile after click
+        >
+          {item.icon}
+          <span>{item.label}</span>
+        </Link>
+      );
+    })}
+  </nav>
+</aside>
 
-      {/* 🌫 Mobile Backdrop */}
-      {isOpen && (
+
+      {/* Overlay for mobile */}
+      {open && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm md:hidden z-40"
-          onClick={() => setIsOpen(false)}
+          className="sm:hidden fixed inset-0 bg-black/30 z-40"
+          onClick={() => setOpen(false)}
         />
       )}
     </>

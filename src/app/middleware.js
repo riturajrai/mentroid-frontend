@@ -1,27 +1,25 @@
 import { NextResponse } from "next/server";
 
 export function middleware(req) {
-  const { pathname } = req.nextUrl;
-  const token = req.cookies.get("token")?.value;
+  const token = req.cookies.get("token"); // cookie from backend
 
-  // Protected routes
-  const protectedRoutes = ["/profile"];
+  const url = req.nextUrl.pathname;
 
-  const isProtected = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
+  const publicRoutes = ["/login"];
 
-  if (isProtected && !token) {
-    const url = new URL("/login", req.url);
-    url.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(url);
+  // If logged in but trying to access public route → redirect to dashboard
+  if (token && publicRoutes.includes(url)) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
+  // If NOT logged in and trying to access protected route → redirect to login
+  if (!token && !publicRoutes.includes(url)) {
+    return NextResponse.redirect(new URL("/login", req.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    "/((?!api|_next|static|login|register).*)",
-  ],
+  matcher: ["/dashboard/:path*", "/login"],
 };

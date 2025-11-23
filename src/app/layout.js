@@ -1,17 +1,18 @@
-
 import "./globals.css";
-import { AuthProvider } from "../app/context/AuthContext";
+import { AuthProvider } from "./providers/AuthProvider";
+import LayoutContent from "./components/LayoutContent";
 
 export const metadata = {
-  title: "Mentoroid",
-  description: "Your app description",
+  title: "My App",
+  description: "Next.js Application",
 };
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
         <AuthProvider>
-          {children}
+          <LayoutContent>{children}</LayoutContent>
         </AuthProvider>
       </body>
     </html>
