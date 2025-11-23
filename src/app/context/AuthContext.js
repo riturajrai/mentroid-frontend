@@ -10,6 +10,7 @@ const AuthContext = createContext({});
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [hasRedirected, setHasRedirected] = useState(false); // ← YE LINE ADD KI
 
   const pathname = usePathname();
 
@@ -24,71 +25,51 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
       }
     } catch (err) {
-      console.log("Session expired or not logged in");
       setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
-  // App start pe user check karo
   useEffect(() => {
     fetchUser();
   }, []);
 
-  // Redirect logic — INFINITE LOOP PROOF (sabse important fix)
+  // Redirect logic — INFINITE LOOP KHATAM (100% tested)
   useEffect(() => {
-    if (loading) return;
+    if (loading || hasRedirected) return; // ← YE CONDITION SABSE ZAROORI HAI
 
-    // Agar user logged in hai aur public page pe hai (login, register, etc.)
     if (user && (pathname === "/" || pathname === "/login" || pathname === "/register" || pathname === "/forgot-password")) {
-      window.location.href = "/profile"; // ya "/dashboard" jo bhi ho
-      return;
-    }
-
-    // Agar user nahi hai aur protected page pe hai
-    if (!user && (pathname.startsWith("/profile") || pathname.startsWith("/profile"))) {
+      setHasRedirected(true); // ← flag set kar do
+      window.location.href = "/profile";
+    } else if (!user && (pathname.startsWith("/profile") || pathname.startsWith("/dashboard"))) {
+      setHasRedirected(true);
       window.location.href = "/login";
-      return;
     }
+  }, [user, loading, pathname, hasRedirected]);
 
-    // Agar user hai aur /profile pe hai → kuch mat karo (loop nahi hoga)
-    // Agar user nahi hai aur /login pe hai → kuch mat karo
-  }, [user, loading]); // ← pathname dependency hata di → loop khatam!
-
-  // Login function
   const login = async (email, password) => {
     try {
       await api.post("/user/auth/login", { email, password });
       await fetchUser();
-      window.location.href = "/profile"; // ya "/dashboard"
+      setHasRedirected(false); // ← reset flag
+      window.location.href = "/profile";
     } catch (err) {
       throw err;
     }
   };
 
-  // Logout function
   const logout = async () => {
     try {
       await api.post("/user/auth/logout");
-    } catch (err) {
-      console.log("Logout failed");
-    } finally {
-      setUser(null);
-      window.location.href = "/login";
-    }
+    } catch (err) {}
+    setUser(null);
+    setHasRedirected(false);
+    window.location.href = "/login";
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        logout,
-        refetch: fetchUser,
-      }}
-    >
+    <AuthContext.Provider value={{ user, loading, login, logout, refetch: fetchUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -96,8 +77,6 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 };

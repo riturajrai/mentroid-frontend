@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import api from "@/lib/axios";
-import toast from "react-hot-toast"; // Make sure you have this installed
+import toast from "react-hot-toast"; 
 
 export default function Profile() {
   const { user, loading, logout, refetch } = useAuth();
