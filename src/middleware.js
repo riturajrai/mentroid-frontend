@@ -1,28 +1,39 @@
-// src/middleware.js
+// middleware.js
 import { NextResponse } from "next/server";
 
-export function middleware(req) {
-  const { pathname } = req.nextUrl;
+export function middleware(request) {
+  const { pathname } = request.nextUrl;
 
-  // Bypass static files and login
+  // Allow public paths
   if (
-    pathname.startsWith("/_next/") ||
-    pathname.startsWith("/assets/") ||
-    pathname === "/favicon.ico" ||
-    pathname.startsWith("/api/") ||
-    pathname === "/login"
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.includes(".") ||
+    pathname === "/login" ||
+    pathname === "/register"
   ) {
     return NextResponse.next();
   }
 
-  // Check for token in cookies
-  const token = req.cookies.get("token"); // Next.js 16 supports req.cookies.get
-  if (!token) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/login";
+  const token = request.cookies.get("token")?.value;
+
+  // Protected routes
+  const protectedPaths = ["/dashboard", "/profile"];
+  const isProtected = protectedPaths.some(path => pathname.startsWith(path));
+
+  if (isProtected && !token) {
+    const url = new URL("/login", request.url);
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 
+  if (token && (pathname === "/login" || pathname === "/register")) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
   return NextResponse.next();
 }
+
+export const config = {
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+};

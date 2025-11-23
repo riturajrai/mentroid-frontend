@@ -2,22 +2,16 @@ import { NextResponse } from "next/server";
 
 export function middleware(req) {
   const { pathname } = req.nextUrl;
-
-  // Allow public assets
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/assets") ||
-    pathname.includes(".") ||
-    pathname.startsWith("/api") ||
-    pathname === "/login" ||
-    pathname === "/register"
-  ) {
-    return NextResponse.next();
-  }
-
   const token = req.cookies.get("token")?.value;
 
-  if (!token && (pathname.startsWith("/dashboard") || pathname.startsWith("/profile"))) {
+  // Protected routes
+  const protectedRoutes = ["/dashboard", "/profile"];
+
+  const isProtected = protectedRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
+  if (isProtected && !token) {
     const url = new URL("/login", req.url);
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
@@ -27,5 +21,7 @@ export function middleware(req) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/profile/:path*"],
+  matcher: [
+    "/((?!api|_next|static|login|register).*)",
+  ],
 };

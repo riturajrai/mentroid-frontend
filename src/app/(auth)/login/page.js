@@ -51,7 +51,7 @@ export default function LoginPage() {
         icon: "Welcome",
         style: { background: "#10b981", color: "white" },
       });
-      setTimeout(() => router.replace("/dashboard"), 600);
+        router.replace("/dashboard");
     } catch (error) {
       const msg = error.response?.data?.message || "Invalid email or password";
       setErrorMsg(msg);

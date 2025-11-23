@@ -6,7 +6,6 @@ export const metadata = {
   title: "Mentoroid",
   description: "Your app description",
 };
-
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
@@ -17,5 +16,4 @@ export default function RootLayout({ children }) {
       </body>
     </html>
   );
-
 }
