@@ -5,7 +5,7 @@ export function middleware(req) {
   const token = req.cookies.get("token")?.value;
 
   // Protected routes
-  const protectedRoutes = ["/dashboard", "/profile"];
+  const protectedRoutes = ["/profile"];
 
   const isProtected = protectedRoutes.some((route) =>
     pathname.startsWith(route)
