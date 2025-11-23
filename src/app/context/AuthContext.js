@@ -1,9 +1,10 @@
+// context/AuthContext.jsx
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import api from "@/lib/axios";
-import axios from "axios";
+
 const AuthContext = createContext({});
 
 export const AuthProvider = ({ children }) => {
@@ -13,55 +14,63 @@ export const AuthProvider = ({ children }) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Fresh user fetch (no cache issue)
+  // Yeh function ab sirf /user/profile/get se full data lata hai
   const fetchUser = async () => {
     try {
-     const res = await api.get("/user/auth/me", { withCredentials: true });
-      setUser(res.data.user || res.data);
+      setLoading(true);
+
+      const res = await api.get("/user/profile/get");
+
+      if (res.data.success && res.data.profile) {
+        setUser(res.data.profile); // Yeh wahi object hai jo tumhara backend bhej raha hai
+      } else {
+        setUser(null);
+      }
     } catch (err) {
-      console.log("Not logged in or token expired");
+      console.log("Not logged in or token expired →", err.response?.data || err.message);
       setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
-  // Initial load pe user check
+  // App load hote hi user check karo
   useEffect(() => {
     fetchUser();
   }, []);
 
-  // Redirect logic - SABSE ZAROORI (production mein yeh hi kaam karta hai)
+  // Redirect logic (public vs protected routes)
   useEffect(() => {
     if (loading) return;
 
-    const isPublicRoute = ["/", "/login", "/register", "/forgot-password"].includes(pathname);
-    const isProtectedRoute = pathname.startsWith("/dashboard") || pathname.startsWith("/profile");
+    const publicRoutes = ["/", "/login", "/register", "/forgot-password"];
+    const isPublic = publicRoutes.includes(pathname);
+    const isProtected = pathname.startsWith("/dashboard") || pathname.startsWith("/profile");
 
-    if (user && isPublicRoute) {
+    if (user && isPublic) {
       router.replace("/dashboard");
-    } else if (!user && isProtectedRoute) {
+    } else if (!user && isProtected) {
       router.replace("/login");
     }
-    // Agar user hai aur dashboard/profile pe hai → kuch mat karo
   }, [user, loading, pathname, router]);
 
-  // LOGIN FUNCTION 
+  // Login function
   const login = async (email, password) => {
     try {
       await api.post("/user/auth/login", { email, password });
-      await fetchUser(); // ← USER STATE UPDATE 
+      await fetchUser(); // Full profile data load karega
+      router.push("/dashboard");
     } catch (err) {
       throw err;
     }
   };
 
-  // LOGOUT FUNCTION
+  // Logout function
   const logout = async () => {
     try {
       await api.post("/user/auth/logout");
     } catch (err) {
-      console.log("Logout API failed");
+      console.log("Logout API failed, clearing anyway");
     } finally {
       setUser(null);
       setLoading(false);
@@ -72,11 +81,11 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user,         // Ab isme full profile data hoga (name, whatsapp, board, class, etc.)
         loading,
         login,
         logout,
-        refetch: fetchUser, // manual refetch ke liye
+        refetch: fetchUser,   // Profile update karne ke baad call karna
       }}
     >
       {children}
@@ -84,11 +93,10 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Custom hook
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
