@@ -41,12 +41,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (loading) return;
 
-    const publicRoutes = ["/", "/login", "/register", "/forgot-password"];
+    const publicRoutes = ["/", "/login", "/register", "/forgot-password" , "/dashboard"];
     const isPublic = publicRoutes.includes(pathname);
-    const isProtected = pathname.startsWith("/dashboard") || pathname.startsWith("/profile");
+    const isProtected = pathname.startsWith("/profile") || pathname.startsWith("/profile");
 
     if (user && isPublic) {
-      window.location.href = "/dashboard";
+      window.location.href = "/profile";
     } else if (!user && isProtected) {
       window.location.href = "/login";
     }
@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await api.post("/user/auth/login", { email, password });
       await fetchUser(); // Fresh data load
-      window.location.href = "/dashboard"; // 100% reliable in production
+      window.location.href = "/profile"; // 100% reliable in production
     } catch (err) {
       throw err;
     }
